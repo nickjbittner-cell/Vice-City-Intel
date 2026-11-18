@@ -46,4 +46,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Length",str(len(data))); self.end_headers(); self.wfile.write(data)
     def log_message(self,*args): pass
 
-http.server.ThreadingHTTPServer(("0.0.0.0",PORT),Handler).serve_forever()
+if __name__ == "__main__":
+    if os.getenv("VCI_BUILD_SMOKE_TEST") == "1":
+        import subprocess
+        with tempfile.TemporaryDirectory() as d:
+            output = Path(d) / "render.mp4"
+            output.write_bytes(render())
+            result = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,width,height",
+                 "-of", "json", str(output)],
+                check=True, capture_output=True, text=True, timeout=20
+            )
+            streams = json.loads(result.stdout)["streams"]
+            assert any(s.get("codec_type") == "video" and s.get("width") == 720 and s.get("height") == 1280 for s in streams)
+            assert any(s.get("codec_type") == "audio" for s in streams)
+            print("VCI_RENDER_SMOKE_TEST_PASS: 720x1280 H264 MP4 with audio")
+    else:
+        http.server.ThreadingHTTPServer(("0.0.0.0",PORT),Handler).serve_forever()
