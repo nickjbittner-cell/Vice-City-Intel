@@ -28,7 +28,10 @@ export default async function handler(req,res){
   }
   if(matches.length!==1)return res.status(409).json({error:'channel_match_count',count:matches.length});
   if(dryRun!==false)return res.status(200).json({status:'validated',channelId:matches[0].id,videoUrl:VIDEO,published:false});
-  // Buffer CreatePostInput fields must be validated against the current Buffer API schema before enabling.
-  return res.status(412).json({error:'create_post_schema_unverified',published:false});
+  const mutation='mutation CreatePost($input: CreatePostInput!) { createPost(input: $input) { ... on PostActionSuccess { post { id dueAt status } } ... on MutationError { message } } }';
+  const input={text:title+'\\n\\n'+description,channelId:matches[0].id,schedulingType:'automatic',mode:'addToQueue',assets:[{video:{url:VIDEO}}]};
+  const result=await graphql(token,mutation,{input});
+  if(result?.createPost?.post?.id)return res.status(200).json({published:false,queued:true,postId:result.createPost.post.id,dueAt:result.createPost.post.dueAt||null});
+  return res.status(422).json({published:false,queued:false,error:result?.createPost?.message||'buffer_no_post_id'});
  }catch(e){return res.status(502).json({error:String(e.message).slice(0,120),published:false})}
 }
