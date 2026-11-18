@@ -27,6 +27,15 @@ def render():
         return mp4.read_bytes()
 
 class Handler(http.server.BaseHTTPRequestHandler):
+    def do_HEAD(self):
+        if self.path == '/health':
+            self.send_response(200); self.send_header('Content-Type','application/json')
+        elif self.path == '/video/intro.mp4' and os.getenv('ALLOW_PUBLIC_INTRO') == '1':
+            self.send_response(200); self.send_header('Content-Type','video/mp4')
+        else:
+            self.send_response(404)
+        self.end_headers()
+
     def do_GET(self):
         if self.path == "/health":
             data = json.dumps({"status":"ok","service":"vice-city-intel-renderer","publishing":False}).encode()
