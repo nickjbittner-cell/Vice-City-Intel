@@ -1,6 +1,4 @@
-"""Isolated Vice City Intel video-rendering smoke-test service.
-No Buffer calls, no uploads, no automated posting until validated.
-"""
+"""Vice City Intel branded intro renderer. No Buffer calls or automated posting."""
 import http.server
 import json
 import os
@@ -9,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 PORT = int(os.getenv("PORT", "8080"))
-SCRIPT = "Vice City Intel. GTA six coverage, without the rumors. Stay tuned for verified updates."
+SCRIPT = "Welcome to Vice City Intel. Your destination for Grand Theft Auto six updates. We separate confirmed announcements from rumors, so you know what is real. Follow for the latest coverage."
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 def render():
@@ -21,7 +19,7 @@ def render():
         vf = ("drawtext=fontfile=" + FONT +
               ":text='VICE CITY INTEL':fontsize=62:fontcolor=white:x=(w-text_w)/2:y=750,"
               "drawtext=fontfile=" + FONT +
-              ":text='RENDER TEST ONLY':fontsize=37:fontcolor=cyan:x=(w-text_w)/2:y=900")
+              ":text='GTA VI NEWS AND UPDATES':fontsize=32:fontcolor=cyan:x=(w-text_w)/2:y=900")
         subprocess.run(["ffmpeg","-y","-f","lavfi","-i","color=c=0x10152c:s=720x1280:r=24",
                         "-i",str(wav),"-vf",vf,"-c:v","libx264","-preset","ultrafast",
                         "-pix_fmt","yuv420p","-c:a","aac","-shortest","-t","12",str(mp4)],
@@ -33,7 +31,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path == "/health":
             data = json.dumps({"status":"ok","service":"vice-city-intel-renderer","publishing":False}).encode()
             self.send_response(200); self.send_header("Content-Type","application/json")
-        elif self.path == "/test-render" and os.getenv("ALLOW_TEST_RENDER") == "1":
+        elif (self.path == "/video/intro.mp4" and os.getenv("ALLOW_PUBLIC_INTRO") == "1") or (self.path == "/test-render" and os.getenv("ALLOW_TEST_RENDER") == "1"):
             try:
                 data = render()
                 self.send_response(200); self.send_header("Content-Type","video/mp4")
